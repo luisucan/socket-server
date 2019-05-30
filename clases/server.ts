@@ -1,16 +1,39 @@
 import express from 'express';
 import { SERVER_PORT } from '../global/enviroment';
+import socketIO from 'socket.io';
+import http from 'http';
+import * as socket from '../sockets/socket';
 
 export class Server{
+    private static _intante: Server;
     public app: express.Application;
     public port: number;
+    public io:SocketIO.Server;
+    private httpServer: http.Server;
 
-    constructor(){
+    private constructor(){
         this.app = express();
         this.port = SERVER_PORT;
+        this.httpServer = new http.Server( this.app );
+        this.io = socketIO( this.httpServer );
+        this.escucharSockets();
+    }
+
+    public static get instance(){
+        return this._intante || (this._intante = new this());
+    }
+
+    private escucharSockets(){
+        console.log("escuchando sockets");
+        this.io.on('connection',cliente => {
+            console.log('cliente conectado');
+
+            socket.desconectar( cliente );
+            socket.mensaje( cliente, this.io );
+        });
     }
 
     start( callback:any ){
-        this.app.listen( this.port,callback );
+        this.httpServer.listen( this.port,callback );
     }
 }
